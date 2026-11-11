@@ -682,11 +682,63 @@ class SoupStrainer(ElementFilter):
         return element if self.match(element) else None
 
 class SoupReplacer:
-    def __init__(self, og_tag, alt_tag):
+    """Transform tags as they close during parsing."""
+
+    def __init__(
+        self,
+        og_tag=None,
+        alt_tag=None,
+        *,
+        name_xformer=None,
+        attrs_xformer=None,
+        xformer=None
+    ):
+        # The original API requires both tag names together.
+        if (og_tag is None) != (alt_tag is None):
+            raise ValueError("Provide both og_tag and alt_tag")
+
+        if og_tag is not None:
+            if (
+                not isinstance(og_tag, str)
+                or not isinstance(alt_tag, str)
+                or not og_tag
+                or not alt_tag
+            ):
+                raise ValueError("Tag names must be nonempty strings")
+
+        # Each provided transformer must be a function or another callable.
+        for callback in (name_xformer, attrs_xformer, xformer):
+            if callback is not None and not callable(callback):
+                raise TypeError("Transformers must be callable or None")
+
         self.og_tag = og_tag
         self.alt_tag = alt_tag
 
+        self.name_xformer = name_xformer
+        self.attrs_xformer = attrs_xformer
+        self.xformer = xformer
+
     def replace(self, name):
-        if name == self.og_tag:
+        """Preserve the original Milestone 2 replacement behavior."""
+        if self.og_tag is not None and name == self.og_tag:
             return self.alt_tag
+
         return name
+
+    def transform(self, tag):
+        """Apply the configured transformations to one tag."""
+
+        # 1. Apply the optional Milestone 2 replacement.
+        tag.name = self.replace(tag.name)
+
+        # 2. Replace the tag name using the returned value.
+        if self.name_xformer is not None:
+            tag.name = self.name_xformer(tag)
+
+        # 3. Replace the attributes using the returned dictionary.
+        if self.attrs_xformer is not None:
+            tag.attrs = self.attrs_xformer(tag)
+
+        # 4. Let the function modify the tag directly.
+        if self.xformer is not None:
+            self.xformer(tag)

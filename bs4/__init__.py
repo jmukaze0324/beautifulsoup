@@ -808,6 +808,10 @@ class BeautifulSoup(Tag):
         # print("Pop", tag.name)
         if self.tagStack:
             self.currentTag = self.tagStack[-1]
+        # Transform the completed tag during parsing.
+        # Exclude the special BeautifulSoup document object.    
+        if self.replacer is not None and tag is not self:
+            self.replacer.transform(tag)
         return self.currentTag
 
     def pushTag(self, tag: Tag) -> None:
@@ -1022,10 +1026,6 @@ class BeautifulSoup(Tag):
         # print("Start tag %s: %s" % (name, attrs))
         self.endData()
 
-        # Apply SoupReplacer during parsing.
-        if self.replacer is not None:
-            name = self.replacer.replace(name)
-
         if (
             self.parse_only
             and len(self.tagStack) <= 1
@@ -1067,12 +1067,7 @@ class BeautifulSoup(Tag):
         :meta private:
         """
         # print("End tag: " + name)
-        self.endData()
-
-        # Match the replacement name used for the opening tag.
-        if self.replacer is not None:
-            name = self.replacer.replace(name)
-            
+        self.endData()  
         self._popToTag(name, nsprefix)
 
     def handle_data(self, data: str) -> None:
