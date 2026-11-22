@@ -493,6 +493,10 @@ class BeautifulSoup(Tag):
         self.markup = None
         self.builder.soup = None
 
+    def __iter__(self) -> Iterator[PageElement]:
+        """Yield the document's descendant nodes in document order."""
+        return self.descendants
+
     def copy_self(self) -> "BeautifulSoup":
         """Create a new BeautifulSoup object with the same TreeBuilder,
         but not associated with any markup.
